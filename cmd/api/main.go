@@ -7,6 +7,7 @@ import (
 
 	"github.com/rafliesa/aravoice-backend/internal/config"
 	"github.com/rafliesa/aravoice-backend/internal/database"
+	"github.com/rafliesa/aravoice-backend/internal/news"
 )
 
 func main() {
@@ -20,6 +21,11 @@ func main() {
 	defer db.Close()
 
 	mux := http.NewServeMux()
+
+	newsRepository := news.NewRepository(db)
+	newsService := news.NewService(newsRepository)
+	newsHandler := news.NewHandler(newsService)
+	newsHandler.RegisterRoutes(mux)
 
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
