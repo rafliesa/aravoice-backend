@@ -12,6 +12,7 @@ import (
 type serviceStub struct {
 	createFn     func(context.Context, CreateNewsRequest) (*NewsResponse, error)
 	getAllFn     func(context.Context) ([]*NewsResponse, error)
+	getCardsFn   func(context.Context, int, int) (*PaginatedNewsCardsResponse, error)
 	getByIDFn    func(context.Context, int) (*NewsResponse, error)
 	getBySlugFn  func(context.Context, string) (*NewsResponse, error)
 	getByTitleFn func(context.Context, string) ([]*NewsResponse, error)
@@ -24,6 +25,14 @@ func (s *serviceStub) Create(ctx context.Context, request CreateNewsRequest) (*N
 
 func (s *serviceStub) GetAll(ctx context.Context) ([]*NewsResponse, error) {
 	return s.getAllFn(ctx)
+}
+
+func (s *serviceStub) GetCards(
+	ctx context.Context,
+	page int,
+	limit int,
+) (*PaginatedNewsCardsResponse, error) {
+	return s.getCardsFn(ctx, page, limit)
 }
 
 func (s *serviceStub) GetByID(ctx context.Context, id int) (*NewsResponse, error) {
@@ -180,6 +189,58 @@ func TestHandlerGetByTitleRequiresQuery(t *testing.T) {
 
 	if recorder.Code != http.StatusBadRequest {
 		t.Fatalf("expected status 400, got %d", recorder.Code)
+	}
+}
+
+func TestHandlerGetCards(t *testing.T) {
+	service := &serviceStub{
+		getCardsFn: func(_ context.Context, page int, limit int) (*PaginatedNewsCardsResponse, error) {
+			if page != 2 || limit != 4 {
+				t.Fatalf("unexpected pagination: page=%d limit=%d", page, limit)
+			}
+			return &PaginatedNewsCardsResponse{
+				Data: []*NewsCardResponse{
+					{ID: 7, Title: "Paginated news"},
+				},
+				Pagination: PaginationResponse{
+					Page:       2,
+					Limit:      4,
+					TotalItems: 10,
+					TotalPages: 3,
+				},
+			}, nil
+		},
+	}
+	mux := http.NewServeMux()
+	NewHandler(service).RegisterRoutes(mux)
+
+	request := httptest.NewRequest(http.MethodGet, "/news/cards?page=2&limit=4", nil)
+	recorder := httptest.NewRecorder()
+
+	mux.ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+	if !strings.Contains(recorder.Body.String(), `"total_pages":3`) {
+		t.Fatalf("unexpected response body: %s", recorder.Body.String())
+	}
+	if strings.Contains(recorder.Body.String(), `"body"`) {
+		t.Fatalf("card response must not include body: %s", recorder.Body.String())
+	}
+}
+
+func TestHandlerGetCardsRejectsInvalidPagination(t *testing.T) {
+	mux := http.NewServeMux()
+	NewHandler(&serviceStub{}).RegisterRoutes(mux)
+
+	request := httptest.NewRequest(http.MethodGet, "/news/cards?page=0", nil)
+	recorder := httptest.NewRecorder()
+
+	mux.ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("expected status 400, got %d: %s", recorder.Code, recorder.Body.String())
 	}
 }
 

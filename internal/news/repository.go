@@ -13,6 +13,7 @@ import (
 type Repository interface {
 	Create(ctx context.Context, input CreateNewsInput) (*News, error)
 	FindAll(ctx context.Context) ([]*News, error)
+	FindPublishedCards(ctx context.Context, limit int, offset int) ([]*NewsCard, int, error)
 	FindByID(ctx context.Context, id int) (*News, error)
 	FindBySlug(ctx context.Context, slug string) (*News, error)
 	FindByTitle(ctx context.Context, title string) ([]*News, error)
@@ -121,6 +122,70 @@ func (r *repository) FindAll(ctx context.Context) ([]*News, error) {
 	}
 
 	return newsList, nil
+}
+
+func (r *repository) FindPublishedCards(
+	ctx context.Context,
+	limit int,
+	offset int,
+) ([]*NewsCard, int, error) {
+	var total int
+	if err := r.db.QueryRow(
+		ctx,
+		`SELECT COUNT(*) FROM news WHERE is_published = TRUE`,
+	).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("count published news cards: %w", err)
+	}
+
+	const query = `
+		SELECT
+			id,
+			category,
+			title,
+			excerpt,
+			author,
+			reading_time,
+			cover_image,
+			caption,
+			formats,
+			published_at
+		FROM news
+		WHERE is_published = TRUE
+		ORDER BY published_at DESC, id DESC
+		LIMIT $1 OFFSET $2
+	`
+
+	rows, err := r.db.Query(ctx, query, limit, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("find published news cards: %w", err)
+	}
+	defer rows.Close()
+
+	newsList := make([]*NewsCard, 0)
+	for rows.Next() {
+		var n NewsCard
+		if err := rows.Scan(
+			&n.Id,
+			&n.Category,
+			&n.Title,
+			&n.Excerpt,
+			&n.Author,
+			&n.ReadingTime,
+			&n.CoverImage,
+			&n.Caption,
+			&n.Formats,
+			&n.PublishedAt,
+		); err != nil {
+			return nil, 0, fmt.Errorf("scan published news card: %w", err)
+		}
+		newsList = append(newsList, &n)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("iterate published news cards: %w", err)
+	}
+
+	return newsList, total, nil
 }
 
 func (r *repository) FindByID(ctx context.Context, id int) (*News, error) {

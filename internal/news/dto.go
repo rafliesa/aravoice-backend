@@ -31,6 +31,31 @@ type NewsResponse struct {
 	IsPublished bool     `json:"is_published"`
 }
 
+type NewsCardResponse struct {
+	ID          int      `json:"id"`
+	Category    string   `json:"category"`
+	Title       string   `json:"title"`
+	Excerpt     string   `json:"excerpt"`
+	Author      string   `json:"author"`
+	ReadingTime int      `json:"reading_time"`
+	CoverImage  string   `json:"cover_image"`
+	Caption     string   `json:"caption"`
+	Formats     []string `json:"formats"`
+	PublishedAt string   `json:"published_at"`
+}
+
+type PaginationResponse struct {
+	Page       int `json:"page"`
+	Limit      int `json:"limit"`
+	TotalItems int `json:"total_items"`
+	TotalPages int `json:"total_pages"`
+}
+
+type PaginatedNewsCardsResponse struct {
+	Data       []*NewsCardResponse `json:"data"`
+	Pagination PaginationResponse  `json:"pagination"`
+}
+
 func ToNewsResponse(n *News) *NewsResponse {
 	if n == nil {
 		return nil
@@ -61,6 +86,25 @@ func ToNewsResponses(newsList []*News) []*NewsResponse {
 	responses := make([]*NewsResponse, len(newsList))
 	for i, n := range newsList {
 		responses[i] = ToNewsResponse(n)
+	}
+	return responses
+}
+
+func ToNewsCardResponses(newsList []*NewsCard) []*NewsCardResponse {
+	responses := make([]*NewsCardResponse, len(newsList))
+	for i, n := range newsList {
+		responses[i] = &NewsCardResponse{
+			ID:          n.Id,
+			Category:    n.Category,
+			Title:       n.Title,
+			Excerpt:     n.Excerpt,
+			Author:      n.Author,
+			ReadingTime: n.ReadingTime,
+			CoverImage:  n.CoverImage,
+			Caption:     n.Caption,
+			Formats:     n.Formats,
+			PublishedAt: n.PublishedAt.Format("2006-01-02T15:04:05Z07:00"),
+		}
 	}
 	return responses
 }

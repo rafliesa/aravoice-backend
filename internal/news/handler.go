@@ -22,6 +22,7 @@ func NewHandler(service Service) *Handler {
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /news", h.Create)
 	mux.HandleFunc("GET /news", h.GetAll)
+	mux.HandleFunc("GET /news/cards", h.GetCards)
 	mux.HandleFunc("GET /news/search", h.GetByTitle)
 	mux.HandleFunc("GET /news/slug/{slug}", h.GetBySlug)
 	mux.HandleFunc("GET /news/{id}", h.GetByID)
@@ -55,6 +56,27 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	response, err := h.service.GetAll(r.Context())
+	if err != nil {
+		handleServiceError(w, err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, response)
+}
+
+func (h *Handler) GetCards(w http.ResponseWriter, r *http.Request) {
+	page, err := parsePositiveQueryInt(r, "page", 1)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	limit, err := parsePositiveQueryInt(r, "limit", 6)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	response, err := h.service.GetCards(r.Context(), page, limit)
 	if err != nil {
 		handleServiceError(w, err)
 		return
@@ -112,6 +134,19 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func parsePositiveQueryInt(r *http.Request, name string, fallback int) (int, error) {
+	value := r.URL.Query().Get(name)
+	if value == "" {
+		return fallback, nil
+	}
+
+	parsed, err := strconv.Atoi(value)
+	if err != nil || parsed <= 0 {
+		return 0, &InvalidInputError{Message: name + " must be a positive integer"}
+	}
+	return parsed, nil
 }
 
 func handleServiceError(w http.ResponseWriter, err error) {

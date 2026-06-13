@@ -39,6 +39,19 @@ type News struct {
 	UpdatedAt   time.Time
 }
 
+type NewsCard struct {
+	Id          int
+	Category    string
+	Title       string
+	Excerpt     string
+	Author      string
+	ReadingTime int
+	CoverImage  string
+	Caption     string
+	Formats     []string
+	PublishedAt time.Time
+}
+
 type CreateNewsInput struct {
 	Slug        string
 	Category    string

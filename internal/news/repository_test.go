@@ -125,6 +125,14 @@ func TestRepositoryIntegration(t *testing.T) {
 		t.Fatalf("unexpected FindAll order: %#v", all)
 	}
 
+	cards, total, err := repository.FindPublishedCards(ctx, 10, 0)
+	if err != nil {
+		t.Fatalf("FindPublishedCards returned error: %v", err)
+	}
+	if total != 1 || len(cards) != 1 || cards[0].Id != first.Id {
+		t.Fatalf("unexpected published cards: total=%d cards=%#v", total, cards)
+	}
+
 	_, err = repository.Create(ctx, CreateNewsInput{
 		Slug:        first.Slug,
 		Category:    "Technology",

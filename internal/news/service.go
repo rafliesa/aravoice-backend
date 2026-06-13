@@ -9,6 +9,7 @@ import (
 type Service interface {
 	Create(ctx context.Context, request CreateNewsRequest) (*NewsResponse, error)
 	GetAll(ctx context.Context) ([]*NewsResponse, error)
+	GetCards(ctx context.Context, page int, limit int) (*PaginatedNewsCardsResponse, error)
 	GetByID(ctx context.Context, id int) (*NewsResponse, error)
 	GetBySlug(ctx context.Context, slug string) (*NewsResponse, error)
 	GetByTitle(ctx context.Context, title string) ([]*NewsResponse, error)
@@ -73,6 +74,39 @@ func (s *service) GetAll(ctx context.Context) ([]*NewsResponse, error) {
 	}
 
 	return ToNewsResponses(newsList), nil
+}
+
+func (s *service) GetCards(
+	ctx context.Context,
+	page int,
+	limit int,
+) (*PaginatedNewsCardsResponse, error) {
+	if page <= 0 {
+		return nil, &InvalidInputError{Message: "page must be greater than zero"}
+	}
+	if limit <= 0 || limit > 50 {
+		return nil, &InvalidInputError{Message: "limit must be between 1 and 50"}
+	}
+
+	newsList, total, err := s.repository.FindPublishedCards(ctx, limit, (page-1)*limit)
+	if err != nil {
+		return nil, err
+	}
+
+	totalPages := 0
+	if total > 0 {
+		totalPages = (total + limit - 1) / limit
+	}
+
+	return &PaginatedNewsCardsResponse{
+		Data: ToNewsCardResponses(newsList),
+		Pagination: PaginationResponse{
+			Page:       page,
+			Limit:      limit,
+			TotalItems: total,
+			TotalPages: totalPages,
+		},
+	}, nil
 }
 
 func (s *service) GetByID(ctx context.Context, id int) (*NewsResponse, error) {
