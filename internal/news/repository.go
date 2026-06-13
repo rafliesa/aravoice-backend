@@ -140,6 +140,7 @@ func (r *repository) FindPublishedCards(
 	const query = `
 		SELECT
 			id,
+			slug,
 			category,
 			title,
 			excerpt,
@@ -166,6 +167,7 @@ func (r *repository) FindPublishedCards(
 		var n NewsCard
 		if err := rows.Scan(
 			&n.Id,
+			&n.Slug,
 			&n.Category,
 			&n.Title,
 			&n.Excerpt,

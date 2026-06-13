@@ -33,6 +33,7 @@ type NewsResponse struct {
 
 type NewsCardResponse struct {
 	ID          int      `json:"id"`
+	Slug        string   `json:"slug"`
 	Category    string   `json:"category"`
 	Title       string   `json:"title"`
 	Excerpt     string   `json:"excerpt"`
@@ -95,6 +96,7 @@ func ToNewsCardResponses(newsList []*NewsCard) []*NewsCardResponse {
 	for i, n := range newsList {
 		responses[i] = &NewsCardResponse{
 			ID:          n.Id,
+			Slug:        n.Slug,
 			Category:    n.Category,
 			Title:       n.Title,
 			Excerpt:     n.Excerpt,

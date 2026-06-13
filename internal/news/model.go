@@ -41,6 +41,7 @@ type News struct {
 
 type NewsCard struct {
 	Id          int
+	Slug        string
 	Category    string
 	Title       string
 	Excerpt     string
