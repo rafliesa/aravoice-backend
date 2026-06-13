@@ -16,6 +16,7 @@ type Repository interface {
 	FindByID(ctx context.Context, id int) (*News, error)
 	FindBySlug(ctx context.Context, slug string) (*News, error)
 	FindByTitle(ctx context.Context, title string) ([]*News, error)
+	Delete(ctx context.Context, id int) error
 }
 
 type repository struct {
@@ -186,6 +187,18 @@ func (r *repository) FindByTitle(ctx context.Context, title string) ([]*News, er
 	}
 
 	return newsList, nil
+}
+
+func (r *repository) Delete(ctx context.Context, id int) error {
+	commandTag, err := r.db.Exec(ctx, `DELETE FROM news WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete news: %w", err)
+	}
+	if commandTag.RowsAffected() == 0 {
+		return ErrNewsNotFound
+	}
+
+	return nil
 }
 
 type rowScanner interface {

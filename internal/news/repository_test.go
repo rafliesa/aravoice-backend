@@ -146,6 +146,17 @@ func TestRepositoryIntegration(t *testing.T) {
 	if !errors.Is(err, ErrNewsNotFound) {
 		t.Fatalf("expected ErrNewsNotFound, got %v", err)
 	}
+
+	if err := repository.Delete(ctx, second.Id); err != nil {
+		t.Fatalf("Delete returned error: %v", err)
+	}
+	_, err = repository.FindByID(ctx, second.Id)
+	if !errors.Is(err, ErrNewsNotFound) {
+		t.Fatalf("expected deleted news to be missing, got %v", err)
+	}
+	if err := repository.Delete(ctx, second.Id); !errors.Is(err, ErrNewsNotFound) {
+		t.Fatalf("expected ErrNewsNotFound when deleting twice, got %v", err)
+	}
 }
 
 func createTestNews(

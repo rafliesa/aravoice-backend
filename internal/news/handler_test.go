@@ -15,6 +15,7 @@ type serviceStub struct {
 	getByIDFn    func(context.Context, int) (*NewsResponse, error)
 	getBySlugFn  func(context.Context, string) (*NewsResponse, error)
 	getByTitleFn func(context.Context, string) ([]*NewsResponse, error)
+	deleteFn     func(context.Context, int) error
 }
 
 func (s *serviceStub) Create(ctx context.Context, request CreateNewsRequest) (*NewsResponse, error) {
@@ -35,6 +36,10 @@ func (s *serviceStub) GetBySlug(ctx context.Context, slug string) (*NewsResponse
 
 func (s *serviceStub) GetByTitle(ctx context.Context, title string) ([]*NewsResponse, error) {
 	return s.getByTitleFn(ctx, title)
+}
+
+func (s *serviceStub) Delete(ctx context.Context, id int) error {
+	return s.deleteFn(ctx, id)
 }
 
 func TestHandlerCreate(t *testing.T) {
@@ -175,5 +180,46 @@ func TestHandlerGetByTitleRequiresQuery(t *testing.T) {
 
 	if recorder.Code != http.StatusBadRequest {
 		t.Fatalf("expected status 400, got %d", recorder.Code)
+	}
+}
+
+func TestHandlerDelete(t *testing.T) {
+	service := &serviceStub{
+		deleteFn: func(_ context.Context, id int) error {
+			if id != 42 {
+				t.Fatalf("unexpected id: %d", id)
+			}
+			return nil
+		},
+	}
+	mux := http.NewServeMux()
+	NewHandler(service).RegisterRoutes(mux)
+
+	request := httptest.NewRequest(http.MethodDelete, "/news/42", nil)
+	recorder := httptest.NewRecorder()
+
+	mux.ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusNoContent {
+		t.Fatalf("expected status 204, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+}
+
+func TestHandlerDeleteNotFound(t *testing.T) {
+	service := &serviceStub{
+		deleteFn: func(context.Context, int) error {
+			return ErrNewsNotFound
+		},
+	}
+	mux := http.NewServeMux()
+	NewHandler(service).RegisterRoutes(mux)
+
+	request := httptest.NewRequest(http.MethodDelete, "/news/999", nil)
+	recorder := httptest.NewRecorder()
+
+	mux.ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusNotFound {
+		t.Fatalf("expected status 404, got %d: %s", recorder.Code, recorder.Body.String())
 	}
 }

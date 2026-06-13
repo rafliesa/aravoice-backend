@@ -12,6 +12,7 @@ type Service interface {
 	GetByID(ctx context.Context, id int) (*NewsResponse, error)
 	GetBySlug(ctx context.Context, slug string) (*NewsResponse, error)
 	GetByTitle(ctx context.Context, title string) ([]*NewsResponse, error)
+	Delete(ctx context.Context, id int) error
 }
 
 type service struct {
@@ -113,6 +114,14 @@ func (s *service) GetByTitle(ctx context.Context, title string) ([]*NewsResponse
 	}
 
 	return ToNewsResponses(newsList), nil
+}
+
+func (s *service) Delete(ctx context.Context, id int) error {
+	if id <= 0 {
+		return &InvalidInputError{Message: "id must be greater than zero"}
+	}
+
+	return s.repository.Delete(ctx, id)
 }
 
 func validateCreateRequest(request CreateNewsRequest) error {

@@ -13,6 +13,7 @@ type repositoryStub struct {
 	findByIDFn    func(context.Context, int) (*News, error)
 	findBySlugFn  func(context.Context, string) (*News, error)
 	findByTitleFn func(context.Context, string) ([]*News, error)
+	deleteFn      func(context.Context, int) error
 }
 
 func (r *repositoryStub) Create(ctx context.Context, input CreateNewsInput) (*News, error) {
@@ -33,6 +34,10 @@ func (r *repositoryStub) FindBySlug(ctx context.Context, slug string) (*News, er
 
 func (r *repositoryStub) FindByTitle(ctx context.Context, title string) ([]*News, error) {
 	return r.findByTitleFn(ctx, title)
+}
+
+func (r *repositoryStub) Delete(ctx context.Context, id int) error {
+	return r.deleteFn(ctx, id)
 }
 
 func TestServiceCreate(t *testing.T) {
@@ -122,6 +127,28 @@ func TestServiceGetByTitleRejectsEmptyTitle(t *testing.T) {
 	service := NewService(&repositoryStub{})
 
 	_, err := service.GetByTitle(context.Background(), " ")
+	if !errors.Is(err, ErrInvalidNewsInput) {
+		t.Fatalf("expected ErrInvalidNewsInput, got %v", err)
+	}
+}
+
+func TestServiceDelete(t *testing.T) {
+	repository := &repositoryStub{
+		deleteFn: func(_ context.Context, id int) error {
+			if id != 7 {
+				t.Fatalf("unexpected id: %d", id)
+			}
+			return nil
+		},
+	}
+
+	if err := NewService(repository).Delete(context.Background(), 7); err != nil {
+		t.Fatalf("Delete returned error: %v", err)
+	}
+}
+
+func TestServiceDeleteRejectsInvalidID(t *testing.T) {
+	err := NewService(&repositoryStub{}).Delete(context.Background(), 0)
 	if !errors.Is(err, ErrInvalidNewsInput) {
 		t.Fatalf("expected ErrInvalidNewsInput, got %v", err)
 	}

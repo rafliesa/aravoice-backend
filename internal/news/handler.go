@@ -25,6 +25,7 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /news/search", h.GetByTitle)
 	mux.HandleFunc("GET /news/slug/{slug}", h.GetBySlug)
 	mux.HandleFunc("GET /news/{id}", h.GetByID)
+	mux.HandleFunc("DELETE /news/{id}", h.Delete)
 }
 
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
@@ -96,6 +97,21 @@ func (h *Handler) GetByTitle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, response)
+}
+
+func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil || id <= 0 {
+		writeError(w, http.StatusBadRequest, "id must be a positive integer")
+		return
+	}
+
+	if err := h.service.Delete(r.Context(), id); err != nil {
+		handleServiceError(w, err)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func handleServiceError(w http.ResponseWriter, err error) {
