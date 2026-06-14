@@ -125,12 +125,46 @@ func TestRepositoryIntegration(t *testing.T) {
 		t.Fatalf("unexpected FindAll order: %#v", all)
 	}
 
-	cards, total, err := repository.FindPublishedCards(ctx, 10, 0)
+	cards, total, err := repository.FindPublishedCards(ctx, "", 10, 0)
 	if err != nil {
 		t.Fatalf("FindPublishedCards returned error: %v", err)
 	}
 	if total != 1 || len(cards) != 1 || cards[0].Id != first.Id {
 		t.Fatalf("unexpected published cards: total=%d cards=%#v", total, cards)
+	}
+
+	filteredCards, filteredTotal, err := repository.FindPublishedCards(
+		ctx,
+		"technology",
+		10,
+		0,
+	)
+	if err != nil {
+		t.Fatalf("FindPublishedCards with category returned error: %v", err)
+	}
+	if filteredTotal != 1 || len(filteredCards) != 1 || filteredCards[0].Id != first.Id {
+		t.Fatalf(
+			"unexpected category-filtered cards: total=%d cards=%#v",
+			filteredTotal,
+			filteredCards,
+		)
+	}
+
+	filteredCards, filteredTotal, err = repository.FindPublishedCards(
+		ctx,
+		"missing",
+		10,
+		0,
+	)
+	if err != nil {
+		t.Fatalf("FindPublishedCards with missing category returned error: %v", err)
+	}
+	if filteredTotal != 0 || len(filteredCards) != 0 {
+		t.Fatalf(
+			"expected no cards for missing category: total=%d cards=%#v",
+			filteredTotal,
+			filteredCards,
+		)
 	}
 
 	_, err = repository.Create(ctx, CreateNewsInput{
