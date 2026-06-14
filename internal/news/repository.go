@@ -13,7 +13,7 @@ import (
 type Repository interface {
 	Create(ctx context.Context, input CreateNewsInput) (*News, error)
 	FindAll(ctx context.Context) ([]*News, error)
-	FindPublishedCards(ctx context.Context, limit int, offset int) ([]*NewsCard, int, error)
+	FindPublishedCards(ctx context.Context, category string, limit int, offset int) ([]*NewsCard, int, error)
 	FindByID(ctx context.Context, id int) (*News, error)
 	FindBySlug(ctx context.Context, slug string) (*News, error)
 	FindByTitle(ctx context.Context, title string) ([]*News, error)
@@ -126,18 +126,24 @@ func (r *repository) FindAll(ctx context.Context) ([]*News, error) {
 
 func (r *repository) FindPublishedCards(
 	ctx context.Context,
+	category string,
 	limit int,
 	offset int,
 ) ([]*NewsCard, int, error) {
+	// An empty category means "all rubriks"; otherwise filter case-insensitively.
+	countQuery := `SELECT COUNT(*) FROM news WHERE is_published = TRUE`
+	countArgs := []any{}
+	if category != "" {
+		countQuery += ` AND LOWER(category) = LOWER($1)`
+		countArgs = append(countArgs, category)
+	}
+
 	var total int
-	if err := r.db.QueryRow(
-		ctx,
-		`SELECT COUNT(*) FROM news WHERE is_published = TRUE`,
-	).Scan(&total); err != nil {
+	if err := r.db.QueryRow(ctx, countQuery, countArgs...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("count published news cards: %w", err)
 	}
 
-	const query = `
+	query := `
 		SELECT
 			id,
 			slug,
@@ -152,11 +158,23 @@ func (r *repository) FindPublishedCards(
 			published_at
 		FROM news
 		WHERE is_published = TRUE
-		ORDER BY published_at DESC, id DESC
-		LIMIT $1 OFFSET $2
 	`
+	args := []any{}
+	if category != "" {
+		args = append(args, category)
+		query += fmt.Sprintf(" AND LOWER(category) = LOWER($%d)", len(args))
+	}
+	args = append(args, limit)
+	limitPos := len(args)
+	args = append(args, offset)
+	offsetPos := len(args)
+	query += fmt.Sprintf(
+		" ORDER BY published_at DESC, id DESC LIMIT $%d OFFSET $%d",
+		limitPos,
+		offsetPos,
+	)
 
-	rows, err := r.db.Query(ctx, query, limit, offset)
+	rows, err := r.db.Query(ctx, query, args...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("find published news cards: %w", err)
 	}
