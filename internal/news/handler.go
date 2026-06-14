@@ -76,7 +76,9 @@ func (h *Handler) GetCards(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response, err := h.service.GetCards(r.Context(), page, limit)
+	category := r.URL.Query().Get("category")
+
+	response, err := h.service.GetCards(r.Context(), category, page, limit)
 	if err != nil {
 		handleServiceError(w, err)
 		return
