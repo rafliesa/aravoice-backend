@@ -12,7 +12,7 @@ import (
 type serviceStub struct {
 	createFn     func(context.Context, CreateNewsRequest) (*NewsResponse, error)
 	getAllFn     func(context.Context) ([]*NewsResponse, error)
-	getCardsFn   func(context.Context, int, int) (*PaginatedNewsCardsResponse, error)
+	getCardsFn   func(context.Context, string, int, int) (*PaginatedNewsCardsResponse, error)
 	getByIDFn    func(context.Context, int) (*NewsResponse, error)
 	getBySlugFn  func(context.Context, string) (*NewsResponse, error)
 	getByTitleFn func(context.Context, string) ([]*NewsResponse, error)
@@ -29,10 +29,11 @@ func (s *serviceStub) GetAll(ctx context.Context) ([]*NewsResponse, error) {
 
 func (s *serviceStub) GetCards(
 	ctx context.Context,
+	category string,
 	page int,
 	limit int,
 ) (*PaginatedNewsCardsResponse, error) {
-	return s.getCardsFn(ctx, page, limit)
+	return s.getCardsFn(ctx, category, page, limit)
 }
 
 func (s *serviceStub) GetByID(ctx context.Context, id int) (*NewsResponse, error) {
@@ -194,7 +195,10 @@ func TestHandlerGetByTitleRequiresQuery(t *testing.T) {
 
 func TestHandlerGetCards(t *testing.T) {
 	service := &serviceStub{
-		getCardsFn: func(_ context.Context, page int, limit int) (*PaginatedNewsCardsResponse, error) {
+		getCardsFn: func(_ context.Context, category string, page int, limit int) (*PaginatedNewsCardsResponse, error) {
+			if category != "Para Report" {
+				t.Fatalf("unexpected category: %q", category)
+			}
 			if page != 2 || limit != 4 {
 				t.Fatalf("unexpected pagination: page=%d limit=%d", page, limit)
 			}
@@ -214,7 +218,7 @@ func TestHandlerGetCards(t *testing.T) {
 	mux := http.NewServeMux()
 	NewHandler(service).RegisterRoutes(mux)
 
-	request := httptest.NewRequest(http.MethodGet, "/news/cards?page=2&limit=4", nil)
+	request := httptest.NewRequest(http.MethodGet, "/news/cards?category=Para+Report&page=2&limit=4", nil)
 	recorder := httptest.NewRecorder()
 
 	mux.ServeHTTP(recorder, request)
