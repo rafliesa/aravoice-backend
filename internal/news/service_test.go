@@ -10,7 +10,7 @@ import (
 type repositoryStub struct {
 	createFn      func(context.Context, CreateNewsInput) (*News, error)
 	findAllFn     func(context.Context) ([]*News, error)
-	findCardsFn   func(context.Context, int, int) ([]*NewsCard, int, error)
+	findCardsFn   func(context.Context, string, int, int) ([]*NewsCard, int, error)
 	findByIDFn    func(context.Context, int) (*News, error)
 	findBySlugFn  func(context.Context, string) (*News, error)
 	findByTitleFn func(context.Context, string) ([]*News, error)
@@ -27,10 +27,11 @@ func (r *repositoryStub) FindAll(ctx context.Context) ([]*News, error) {
 
 func (r *repositoryStub) FindPublishedCards(
 	ctx context.Context,
+	category string,
 	limit int,
 	offset int,
 ) ([]*NewsCard, int, error) {
-	return r.findCardsFn(ctx, limit, offset)
+	return r.findCardsFn(ctx, category, limit, offset)
 }
 
 func (r *repositoryStub) FindByID(ctx context.Context, id int) (*News, error) {
@@ -143,7 +144,10 @@ func TestServiceGetByTitleRejectsEmptyTitle(t *testing.T) {
 
 func TestServiceGetCards(t *testing.T) {
 	repository := &repositoryStub{
-		findCardsFn: func(_ context.Context, limit int, offset int) ([]*NewsCard, int, error) {
+		findCardsFn: func(_ context.Context, category string, limit int, offset int) ([]*NewsCard, int, error) {
+			if category != "Para Report" {
+				t.Fatalf("unexpected category: %q", category)
+			}
 			if limit != 4 || offset != 4 {
 				t.Fatalf("unexpected pagination: limit=%d offset=%d", limit, offset)
 			}
@@ -157,7 +161,7 @@ func TestServiceGetCards(t *testing.T) {
 		},
 	}
 
-	response, err := NewService(repository).GetCards(context.Background(), 2, 4)
+	response, err := NewService(repository).GetCards(context.Background(), "  Para Report  ", 2, 4)
 	if err != nil {
 		t.Fatalf("GetCards returned error: %v", err)
 	}
@@ -172,10 +176,10 @@ func TestServiceGetCards(t *testing.T) {
 func TestServiceGetCardsRejectsInvalidPagination(t *testing.T) {
 	service := NewService(&repositoryStub{})
 
-	if _, err := service.GetCards(context.Background(), 0, 6); !errors.Is(err, ErrInvalidNewsInput) {
+	if _, err := service.GetCards(context.Background(), "", 0, 6); !errors.Is(err, ErrInvalidNewsInput) {
 		t.Fatalf("expected invalid page error, got %v", err)
 	}
-	if _, err := service.GetCards(context.Background(), 1, 51); !errors.Is(err, ErrInvalidNewsInput) {
+	if _, err := service.GetCards(context.Background(), "", 1, 51); !errors.Is(err, ErrInvalidNewsInput) {
 		t.Fatalf("expected invalid limit error, got %v", err)
 	}
 }
