@@ -62,13 +62,18 @@ func ToNewsResponse(n *News) *NewsResponse {
 		return nil
 	}
 
+	body, err := sanitizeNewsHTML(n.Body)
+	if err != nil {
+		body = ""
+	}
+
 	return &NewsResponse{
 		ID:          n.Id,
 		Slug:        n.Slug,
 		Category:    n.Category,
 		Title:       n.Title,
 		Excerpt:     n.Excerpt,
-		Body:        n.Body,
+		Body:        body,
 		Author:      n.Author,
 		ReadingTime: n.ReadingTime,
 		CoverImage:  n.CoverImage,
