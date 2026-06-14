@@ -9,7 +9,7 @@ import (
 type Service interface {
 	Create(ctx context.Context, request CreateNewsRequest) (*NewsResponse, error)
 	GetAll(ctx context.Context) ([]*NewsResponse, error)
-	GetCards(ctx context.Context, page int, limit int) (*PaginatedNewsCardsResponse, error)
+	GetCards(ctx context.Context, category string, page int, limit int) (*PaginatedNewsCardsResponse, error)
 	GetByID(ctx context.Context, id int) (*NewsResponse, error)
 	GetBySlug(ctx context.Context, slug string) (*NewsResponse, error)
 	GetByTitle(ctx context.Context, title string) ([]*NewsResponse, error)
@@ -84,6 +84,7 @@ func (s *service) GetAll(ctx context.Context) ([]*NewsResponse, error) {
 
 func (s *service) GetCards(
 	ctx context.Context,
+	category string,
 	page int,
 	limit int,
 ) (*PaginatedNewsCardsResponse, error) {
@@ -94,7 +95,9 @@ func (s *service) GetCards(
 		return nil, &InvalidInputError{Message: "limit must be between 1 and 50"}
 	}
 
-	newsList, total, err := s.repository.FindPublishedCards(ctx, limit, (page-1)*limit)
+	category = strings.TrimSpace(category)
+
+	newsList, total, err := s.repository.FindPublishedCards(ctx, category, limit, (page-1)*limit)
 	if err != nil {
 		return nil, err
 	}
