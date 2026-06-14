@@ -10,6 +10,7 @@ import (
 type Config struct {
 	Port        string
 	DatabaseURL string
+	UploadDir   string
 }
 
 func Load() Config {
@@ -19,6 +20,7 @@ func Load() Config {
 
 	port := getEnv("PORT", "8080")
 	databaseURL := getEnv("DATABASE_URL", "postgres://user:password@localhost:5432/mydb?sslmode=disable")
+	uploadDir := getEnv("UPLOAD_DIR", "./uploads")
 
 	if databaseURL == "" {
 		log.Fatal("DATABASE_URL is required but not set")
@@ -27,6 +29,7 @@ func Load() Config {
 	return Config{
 		Port:        port,
 		DatabaseURL: databaseURL,
+		UploadDir:   uploadDir,
 	}
 }
 
