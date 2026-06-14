@@ -35,6 +35,12 @@ func (s *service) Create(ctx context.Context, request CreateNewsRequest) (*NewsR
 	request.Caption = strings.TrimSpace(request.Caption)
 	request.PublishedAt = strings.TrimSpace(request.PublishedAt)
 
+	sanitizedBody, err := sanitizeNewsHTML(request.Body)
+	if err != nil {
+		return nil, &InvalidInputError{Message: "body contains invalid HTML"}
+	}
+	request.Body = sanitizedBody
+
 	if err := validateCreateRequest(request); err != nil {
 		return nil, err
 	}
